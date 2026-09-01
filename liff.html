@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>BB Glow หัวหิน — เช็คเครดิต</title>
+
+<!-- LINE LIFF SDK -->
+<script src="https://static.line-scdn.net/liff/edge/versions/2.22.3/sdk.js"></script>
+
+<!-- Firebase compat SDK -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;}
+  :root{
+    --gold:#D4A84B;--gold-light:#F5E0A0;--gold-dark:#A07830;--gold-shine:#FFE88A;
+    --red:#8B0000;--red-mid:#A01020;--red-light:#C02030;
+    --bg:#1A0A0A;--bg2:#0F0505;--surface:#1E0808;--surface2:#2A0C0C;
+    --border:rgba(212,168,75,0.25);--border-gold:rgba(212,168,75,0.5);
+    --text:#F5E8D0;--text-muted:#9C7A5A;--text-gold:#F0D898;
+    --text-success:#66BB6A;--success-bg:rgba(102,187,106,0.12);
+  }
+  body{
+    font-family:'Sarabun',sans-serif;
+    background:radial-gradient(ellipse at top,#2A0808 0%,#0F0303 60%,#000000 100%);
+    color:var(--text);min-height:100vh;
+  }
+  @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&display=swap');
+
+  /* ======= SCREENS ======= */
+  .screen{display:none;flex-direction:column;min-height:100vh;}
+  .screen.active{display:flex;}
+
+  /* ======= HEADER ======= */
+  .header{
+    background:linear-gradient(160deg,#6B0010 0%,#3A0008 50%,#1A0005 100%);
+    padding:32px 20px 24px;text-align:center;color:white;
+    position:relative;overflow:hidden;
+    border-bottom:1px solid var(--border-gold);
+  }
+  /* เส้นทองบนสุด */
+  .header::before{
+    content:'';position:absolute;top:0;left:0;right:0;height:2px;
+    background:linear-gradient(90deg,transparent,var(--gold),var(--gold-shine),var(--gold),transparent);
+  }
+  /* ลาย ✦ พื้นหลัง */
+  .header::after{
+    content:'✦ ✦ ✦';position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+    font-size:3rem;opacity:0.04;color:var(--gold-light);white-space:nowrap;letter-spacing:40px;
+  }
+  .header-logo{
+    font-size:1.6rem;font-weight:700;letter-spacing:3px;
+    background:linear-gradient(135deg,var(--gold-light),var(--gold-shine),var(--gold));
+    -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+  }
+  .header-sub{
+    font-size:0.7rem;margin-top:3px;letter-spacing:4px;
+    color:rgba(240,216,152,0.55);
+  }
+  .header-divider{
+    width:60px;height:1px;margin:12px auto;
+    background:linear-gradient(90deg,transparent,var(--gold),transparent);
+  }
+  .header-avatar{
+    width:60px;height:60px;border-radius:50%;margin:8px auto 0;
+    border:1.5px solid var(--gold);
+    display:flex;align-items:center;justify-content:center;font-size:1.6rem;overflow:hidden;
+    box-shadow:0 0 16px rgba(212,168,75,0.3);
+  }
+  .header-avatar img{width:100%;height:100%;object-fit:cover;}
+  .header-name{font-size:0.82rem;margin-top:8px;color:var(--gold-light);opacity:0.85;}
+
+  /* ======= PHONE INPUT SCREEN ======= */
+  .phone-wrap{
+    flex:1;display:flex;flex-direction:column;align-items:center;
+    justify-content:center;padding:32px 24px;
+  }
+  .phone-icon{font-size:3rem;margin-bottom:16px;}
+  .phone-title{font-size:1.05rem;font-weight:700;color:var(--gold-light);margin-bottom:6px;}
+  .phone-desc{font-size:0.8rem;color:var(--text-muted);text-align:center;line-height:1.6;margin-bottom:24px;}
+  .phone-input{
+    width:100%;padding:14px 16px;font-size:1.1rem;
+    border:1.5px solid var(--border-gold);border-radius:14px;
+    font-family:'Sarabun',sans-serif;text-align:center;letter-spacing:2px;
+    outline:none;color:var(--text-gold);background:var(--surface2);
+    transition:border-color .2s,box-shadow .2s;
+  }
+  .phone-input::placeholder{color:rgba(160,120,80,0.45);}
+  .phone-input:focus{border-color:var(--gold);box-shadow:0 0 12px rgba(212,168,75,0.2);}
+  .phone-btn{
+    width:100%;margin-top:14px;padding:15px;
+    background:linear-gradient(135deg,var(--red-light),var(--red-mid),var(--red));
+    border:1px solid var(--border-gold);
+    color:var(--gold-light);border-radius:14px;
+    font-size:1rem;font-weight:700;font-family:'Sarabun',sans-serif;
+    cursor:pointer;letter-spacing:1px;
+    transition:opacity .2s,box-shadow .2s;
+    box-shadow:0 4px 16px rgba(139,0,0,0.4);
+  }
+  .phone-btn:active{opacity:0.85;box-shadow:none;}
+  .phone-err{font-size:0.78rem;color:#FF6B6B;margin-top:10px;text-align:center;}
+
+  /* ======= MEMBER CARD ======= */
+  .member-card{
+    background:linear-gradient(145deg,#6B0010 0%,#3A0008 45%,#1A0005 80%,#2A000A 100%);
+    margin:16px;border-radius:20px;padding:24px 20px;color:white;
+    position:relative;overflow:hidden;
+    border:1px solid var(--border-gold);
+    box-shadow:0 8px 32px rgba(139,0,0,0.5),0 0 0 1px rgba(212,168,75,0.1) inset;
+  }
+  /* เส้นทองบนสุด card */
+  .member-card::before{
+    content:'';position:absolute;top:0;left:0;right:0;height:1.5px;
+    background:linear-gradient(90deg,transparent 5%,var(--gold) 30%,var(--gold-shine) 50%,var(--gold) 70%,transparent 95%);
+  }
+  .member-card::after{
+    content:'✦';position:absolute;right:-15px;bottom:-25px;
+    font-size:110px;opacity:0.06;color:var(--gold-light);pointer-events:none;
+  }
+  .mc-row{display:flex;align-items:flex-start;justify-content:space-between;}
+  .mc-name{
+    font-size:1.2rem;font-weight:700;
+    background:linear-gradient(135deg,var(--gold-light),var(--gold-shine));
+    -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+  }
+  .mc-phone{font-size:0.76rem;color:rgba(240,216,152,0.55);margin-top:3px;}
+  .mc-code{font-size:0.66rem;color:rgba(212,168,75,0.45);margin-top:3px;letter-spacing:1px;}
+  .mc-badge{
+    background:linear-gradient(135deg,var(--gold),var(--gold-dark));
+    color:#1A0005;font-size:0.62rem;font-weight:700;padding:4px 10px;border-radius:20px;
+    white-space:nowrap;align-self:flex-start;letter-spacing:0.5px;
+  }
+  .credit-section{margin-top:20px;padding-top:16px;border-top:1px solid rgba(212,168,75,0.2);}
+  .credit-label{font-size:0.65rem;color:rgba(212,168,75,0.6);text-transform:uppercase;letter-spacing:2px;}
+  .credit-amount{
+    font-size:2.8rem;font-weight:700;line-height:1;margin-top:4px;
+    background:linear-gradient(135deg,var(--gold-light),var(--gold-shine),#FFD700);
+    -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+    filter:drop-shadow(0 0 8px rgba(212,168,75,0.3));
+  }
+  .credit-unit{font-size:1rem;}
+
+  /* ======= SECTION ======= */
+  .section{margin:0 16px 16px;}
+  .section-title{
+    font-size:0.7rem;font-weight:700;color:var(--gold);
+    text-transform:uppercase;letter-spacing:2px;margin-bottom:10px;
+    display:flex;align-items:center;gap:8px;
+  }
+  .section-title::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,var(--border-gold),transparent);}
+
+  /* ======= VOUCHER CARD ======= */
+  .voucher-card{
+    background:linear-gradient(135deg,var(--surface2) 0%,#220A0A 100%);
+    border:1px solid var(--border-gold);border-radius:14px;
+    padding:14px 15px;margin-bottom:8px;position:relative;overflow:hidden;
+    box-shadow:0 2px 12px rgba(0,0,0,0.4);
+  }
+  .voucher-card::before{
+    content:'';position:absolute;left:0;top:0;bottom:0;width:3px;
+    background:linear-gradient(180deg,var(--gold-shine),var(--gold),var(--gold-dark));
+  }
+  .vc-name{font-size:0.9rem;font-weight:700;color:var(--gold-light);padding-left:10px;}
+  .vc-note{font-size:0.72rem;color:var(--text-muted);margin-top:3px;padding-left:10px;}
+  .vc-expiry{font-size:0.68rem;color:#FF8A80;font-weight:600;margin-top:4px;padding-left:10px;}
+  .vc-status-badge{
+    display:inline-block;font-size:0.65rem;font-weight:700;
+    padding:3px 10px;border-radius:20px;margin-top:7px;margin-left:10px;letter-spacing:0.5px;
+  }
+  .badge-active{background:rgba(212,168,75,0.15);color:var(--gold-light);border:1px solid var(--border-gold);}
+  .badge-used{background:rgba(102,187,106,0.12);color:#81C784;border:1px solid rgba(102,187,106,0.3);}
+  .badge-expired{background:rgba(255,82,82,0.1);color:#FF6B6B;border:1px solid rgba(255,82,82,0.25);}
+  .voucher-used{opacity:0.45;}
+  .voucher-used .vc-name{text-decoration:line-through;color:var(--text-muted);}
+  .voucher-used::before{background:#555;}
+  .voucher-expired{opacity:0.4;}
+  .voucher-expired::before{background:#7A0000;}
+
+  /* ======= HISTORY ======= */
+  .tx-item{
+    background:var(--surface2);border-radius:12px;padding:12px 14px;
+    margin-bottom:6px;border:1px solid rgba(212,168,75,0.12);
+    display:flex;align-items:center;justify-content:space-between;
+  }
+  .tx-date{font-size:0.7rem;color:var(--text-muted);}
+  .tx-services{font-size:0.82rem;font-weight:600;color:var(--text);margin-top:2px;}
+  .tx-price{font-size:0.9rem;font-weight:700;color:var(--gold-light);}
+  .tx-credit-earn{font-size:0.7rem;color:#81C784;}
+  .tx-right{text-align:right;}
+
+  /* ======= EMPTY ======= */
+  .empty-box{
+    text-align:center;padding:28px 20px;color:var(--text-muted);font-size:0.82rem;
+  }
+
+  /* ======= NOT FOUND ======= */
+  .not-found{
+    flex:1;display:flex;flex-direction:column;align-items:center;
+    justify-content:center;padding:32px 24px;text-align:center;
+  }
+  .not-found-icon{font-size:3rem;margin-bottom:14px;}
+  .not-found-title{font-size:1rem;font-weight:700;color:var(--gold-light);margin-bottom:6px;}
+  .not-found-desc{font-size:0.8rem;color:var(--text-muted);line-height:1.6;margin-bottom:22px;}
+  .back-btn{
+    padding:12px 28px;border-radius:30px;border:1.5px solid var(--gold);
+    background:transparent;color:var(--gold-light);font-size:0.9rem;font-weight:700;
+    font-family:'Sarabun',sans-serif;cursor:pointer;letter-spacing:0.5px;
+    transition:background .2s;
+  }
+  .back-btn:active{background:rgba(212,168,75,0.1);}
+
+  /* ======= LOADING ======= */
+  #loading-screen{
+    position:fixed;inset:0;
+    background:radial-gradient(ellipse at center,#2A0808 0%,#000000 100%);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    z-index:999;
+  }
+  .spinner{
+    width:40px;height:40px;
+    border:2px solid rgba(212,168,75,0.15);
+    border-top-color:var(--gold);border-radius:50%;
+    animation:spin 0.8s linear infinite;margin-bottom:14px;
+  }
+  @keyframes spin{to{transform:rotate(360deg);}}
+  .loading-text{font-size:0.8rem;color:var(--text-muted);letter-spacing:1px;}
+
+  .footer-note{
+    text-align:center;padding:20px 16px 36px;
+    font-size:0.68rem;color:rgba(156,120,80,0.5);line-height:1.8;
+    border-top:1px solid rgba(212,168,75,0.08);margin-top:8px;
+  }
+</style>
+</head>
+<body>
+
+<!-- Loading -->
+<div id="loading-screen">
+  <div class="spinner"></div>
+  <div class="loading-text">กำลังโหลด...</div>
+</div>
+
+<!-- Phone Input Screen -->
+<div id="screen-phone" class="screen">
+  <div class="header">
+    <div class="header-logo">✦ BB Glow หัวหิน</div>
+    <div class="header-sub">BEAUTY &amp; SKINCARE</div>
+    <div class="header-divider"></div>
+    <div class="header-avatar" id="line-avatar">👤</div>
+    <div class="header-name" id="line-name">สวัสดีค่ะ</div>
+  </div>
+  <div class="phone-wrap">
+    <div class="phone-icon">📋</div>
+    <div class="phone-title">เช็คเครดิตและสิทธิ์พิเศษ</div>
+    <div class="phone-desc">กรุณากรอกเบอร์โทรที่ลงทะเบียนไว้กับร้านค่ะ</div>
+    <input type="tel" id="phone-input" class="phone-input"
+      placeholder="0xx-xxx-xxxx" maxlength="10"
+      oninput="this.value=this.value.replace(/\D/g,'')"
+      onkeydown="if(event.key==='Enter')lookupMember()">
+    <button class="phone-btn" onclick="lookupMember()">ตรวจสอบ →</button>
+    <div class="phone-err" id="phone-err"></div>
+  </div>
+</div>
+
+<!-- Member Found Screen -->
+<div id="screen-member" class="screen">
+  <div class="header">
+    <div class="header-logo">✦ BB Glow หัวหิน</div>
+    <div class="header-sub">BEAUTY &amp; SKINCARE</div>
+    <div class="header-divider"></div>
+  </div>
+
+  <div id="member-card-wrap"></div>
+
+  <div class="section" id="voucher-section" style="display:none;">
+    <div class="section-title">🎁 สิทธิ์พิเศษ</div>
+    <div id="voucher-list"></div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">📋 ประวัติการใช้บริการ</div>
+    <div id="tx-list"></div>
+  </div>
+
+  <div class="footer-note">
+    เครดิตสะสม 5% จากทุกการใช้บริการ BB Glow<br>
+    สอบถามเพิ่มเติม โทร 089-027-9002
+  </div>
+</div>
+
+<!-- Not Found Screen -->
+<div id="screen-notfound" class="screen">
+  <div class="header">
+    <div class="header-logo">✦ BB Glow หัวหิน</div>
+    <div class="header-sub">BEAUTY &amp; SKINCARE</div>
+    <div class="header-divider"></div>
+  </div>
+  <div class="not-found">
+    <div class="not-found-icon">🔍</div>
+    <div class="not-found-title">ไม่พบข้อมูลสมาชิก</div>
+    <div class="not-found-desc">ไม่พบเบอร์โทร <strong id="notfound-phone"></strong> ในระบบค่ะ<br>กรุณาตรวจสอบเบอร์อีกครั้ง หรือติดต่อทางร้านเพื่อลงทะเบียนค่ะ</div>
+    <button class="back-btn" onclick="showScreen('phone')">← ลองใหม่</button>
+  </div>
+</div>
+
+<script>
+  const LIFF_ID = '2009365473-b3H1gkuk';
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyB8HM1grB7OsiBvdLo5xRH5SqLnQoLR25U",
+    authDomain: "bbglowhuahin-3bb7d.firebaseapp.com",
+    projectId: "bbglowhuahin-3bb7d",
+    storageBucket: "bbglowhuahin-3bb7d.firebasestorage.app",
+    messagingSenderId: "714462283652",
+    appId: "1:714462283652:web:088c6ddde11f46fc08ffd1"
+  };
+
+  let db;
+
+  // ===== UTILS =====
+  function fmtDate(iso){
+    if(!iso) return '';
+    const d=new Date(iso.length===10?iso+'T00:00:00':iso);
+    return d.toLocaleDateString('th-TH',{year:'numeric',month:'short',day:'numeric'});
+  }
+
+  function showScreen(name){
+    document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+    document.getElementById('screen-'+name).classList.add('active');
+    document.getElementById('loading-screen').style.display='none';
+  }
+
+  // ===== INIT =====
+  async function init(){
+    try{
+      // Firebase
+      firebase.initializeApp(firebaseConfig);
+      db = firebase.firestore();
+
+      // LIFF
+      await liff.init({liffId: LIFF_ID});
+
+      if(!liff.isLoggedIn()){
+        liff.login({redirectUri:location.href});
+        return;
+      }
+
+      // Get LINE profile
+      const profile = await liff.getProfile();
+      document.getElementById('line-name').textContent = 'สวัสดีค่ะ คุณ' + profile.displayName;
+      const avatarEl = document.getElementById('line-avatar');
+      if(profile.pictureUrl){
+        avatarEl.innerHTML = `<img src="${profile.pictureUrl}" alt="avatar">`;
+      }
+
+      showScreen('phone');
+    } catch(e){
+      console.error(e);
+      // Still show phone screen even if LIFF fails (for testing outside LINE)
+      try{
+        firebase.initializeApp(firebaseConfig);
+        db = firebase.firestore();
+      } catch(e2){}
+      showScreen('phone');
+    }
+  }
+
+  // ===== LOOKUP =====
+  async function lookupMember(){
+    const phone = document.getElementById('phone-input').value.trim();
+    const errEl = document.getElementById('phone-err');
+    errEl.textContent = '';
+
+    if(phone.length < 9){
+      errEl.textContent = 'กรุณากรอกเบอร์โทรให้ครบค่ะ';
+      return;
+    }
+
+    document.getElementById('loading-screen').style.display='flex';
+
+    try{
+      // Query members where phone == input
+      const snap = await db.collection('members').where('phone','==',phone).limit(1).get();
+
+      if(snap.empty){
+        document.getElementById('notfound-phone').textContent = phone;
+        showScreen('notfound');
+        return;
+      }
+
+      const member = {id: snap.docs[0].id, ...snap.docs[0].data()};
+      await renderMember(member, phone);
+      showScreen('member');
+
+    } catch(e){
+      console.error(e);
+      errEl.textContent = 'เกิดข้อผิดพลาด กรุณาลองใหม่ค่ะ';
+      document.getElementById('loading-screen').style.display='none';
+    }
+  }
+
+  // ===== RENDER MEMBER =====
+  async function renderMember(m, phone){
+    // เครดิตดึงจาก transactions collection เหมือน POS
+    const credit = 0; // จะคำนวณจาก txs ด้านล่าง
+    const ini = (m.name||'').slice(0,2);
+    const code = m.customerCode ? 'รหัส: '+m.customerCode : '';
+    const badge = m.isMember ? '<span class="mc-badge">✦ สมาชิก</span>' : '';
+
+    // Member card
+    document.getElementById('member-card-wrap').innerHTML = `
+      <div class="member-card">
+        <div class="mc-row">
+          <div>
+            <div class="mc-name">${m.name||phone}</div>
+            <div class="mc-phone">${phone}</div>
+            ${code ? `<div class="mc-code">${code}</div>` : ''}
+          </div>
+          ${badge}
+        </div>
+        <div class="credit-section">
+          <div class="credit-label">เครดิตสะสม</div>
+          <div class="credit-amount">${credit.toLocaleString()} <span class="credit-unit">฿</span></div>
+        </div>
+      </div>
+    `;
+
+    // Vouchers
+    const vouchers = m.vouchers||[];
+    if(vouchers.length > 0){
+      const now = new Date();
+      const vHtml = vouchers.map(v=>{
+        const isUsed = !!v.usedAt;
+        const isExpired = !isUsed && new Date(v.expiry+'T23:59:59') < now;
+        const isActive = !isUsed && !isExpired;
+
+        let cardClass = 'voucher-card';
+        let badge = '';
+        if(isUsed){ cardClass+=' voucher-used'; badge=`<span class="vc-status-badge badge-used">ใช้แล้ว ✓</span>`; }
+        else if(isExpired){ cardClass+=' voucher-expired'; badge=`<span class="vc-status-badge badge-expired">หมดอายุ</span>`; }
+        else{ badge=`<span class="vc-status-badge badge-active">🎁 ยังไม่ได้ใช้</span>`; }
+
+        const dateNote = isUsed
+          ? `<div class="vc-expiry">ใช้เมื่อ: ${fmtDate(v.usedAt)}</div>`
+          : `<div class="vc-expiry">ใช้ได้ถึง: ${fmtDate(v.expiry)}</div>`;
+
+        return `<div class="${cardClass}">
+          <div class="vc-name">${v.name}</div>
+          <div class="vc-note">${v.note||''}</div>
+          ${dateNote}
+          ${badge}
+        </div>`;
+      }).join('');
+
+      document.getElementById('voucher-list').innerHTML = vHtml;
+      document.getElementById('voucher-section').style.display='';
+    }
+
+    // Transaction history
+    try{
+      const txSnap = await db.collection('transactions')
+        .where('memberId','==',m.id||'')
+        .orderBy('date','desc')
+        .limit(15)
+        .get();
+
+      const txs = txSnap.docs.map(d=>d.data()).filter(t=>!t.voided);
+      // คำนวณเครดิตจาก balance ที่ยังไม่หมดอายุ
+      const now2 = new Date();
+      const validCredit = Math.round(txs.filter(t=>t.balance>0&&new Date(t.expiry)>now2).reduce((s,t)=>s+t.balance,0));
+      document.querySelector('.credit-amount').innerHTML = validCredit.toLocaleString()+' <span class="credit-unit">฿</span>';
+      if(txs.length === 0){
+        document.getElementById('tx-list').innerHTML =
+          '<div class="empty-box">ยังไม่มีประวัติการใช้บริการค่ะ</div>';
+      } else {
+        document.getElementById('tx-list').innerHTML = txs.map(t=>{
+          const services = t.service || (t.services||[]).map(s=>s.name||s).join(', ') || t.note || '—';
+          const earnNote = t.creditEarned>0 ? `+${t.creditEarned} ฿ เครดิต` : '';
+          return `<div class="tx-item">
+            <div>
+              <div class="tx-date">${fmtDate(t.date)}</div>
+              <div class="tx-services">${services}</div>
+              ${earnNote ? `<div class="tx-credit-earn">💎 ${earnNote}</div>` : ''}
+            </div>
+            <div class="tx-right">
+              <div class="tx-price">${(t.totalPaid||t.paid||t.price||0).toLocaleString()} ฿</div>
+            </div>
+          </div>`;
+        }).join('');
+      }
+    } catch(e){
+      // Firestore may need index for orderBy — fall back to simpler query
+      try{
+        const txSnap2 = await db.collection('transactions')
+          .where('memberId','==',m.id||'')
+          .limit(15)
+          .get();
+        const txs2 = txSnap2.docs.map(d=>d.data()).filter(t=>!t.voided)
+          .sort((a,b)=>new Date(b.date)-new Date(a.date));
+        if(txs2.length === 0){
+          document.getElementById('tx-list').innerHTML =
+            '<div class="empty-box">ยังไม่มีประวัติการใช้บริการค่ะ</div>';
+        } else {
+          document.getElementById('tx-list').innerHTML = txs2.map(t=>{
+            const services = t.service || (t.services||[]).map(s=>s.name||s).join(', ') || '—';
+            const earnNote = t.creditEarned>0 ? `+${t.creditEarned} ฿ เครดิต` : '';
+            return `<div class="tx-item">
+              <div>
+                <div class="tx-date">${fmtDate(t.date)}</div>
+                <div class="tx-services">${services}</div>
+                ${earnNote ? `<div class="tx-credit-earn">💎 ${earnNote}</div>` : ''}
+              </div>
+              <div class="tx-right">
+                <div class="tx-price">${(t.totalPaid||t.paid||t.price||0).toLocaleString()} ฿</div>
+              </div>
+            </div>`;
+          }).join('');
+        }
+      } catch(e2){
+        document.getElementById('tx-list').innerHTML =
+          '<div class="empty-box">ไม่สามารถโหลดประวัติได้ค่ะ</div>';
+      }
+    }
+  }
+
+  // ===== START =====
+  window.addEventListener('load', init);
+</script>
+</body>
+</html>
